@@ -30,6 +30,8 @@ int main()
     auto anss2 = ans2.cast<py::list>();
     py::print(anss2);
 
+    std::cout << "---------------------------------------------cpp-----------------------------------------------\n";
+    std::cout << anss1;
     std::cin.get();
     
     return 0;
