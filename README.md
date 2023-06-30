@@ -1,36 +1,36 @@
 # callpython
-  ��C++�е���python�ű�
+  在C++中调用python脚本
 
-## Ŀ��
-* ��C++���ɵı�д��python��������
-* ���յĳ����ܴ������������python�������ն�
-* python��������������ܵ�С
+## 目标
+* 在C++轻松的编写与python交互代码
+* 最终的程序能打包并运行在无python环境的终端
+* python的依赖体积尽可能的小
 
-## ����
-* [pybind11](https://github.com/pybind/pybind11)�� ͨ�� ```vcpkg install pybind11``` ����
-* python3.8�� 3.8 �����һ��֧�� Win7 �İ汾������������python38��windows64λ�汾����ɾ����һЩ����Ҫ�Ŀ�(����```tcl, tk```��, �����Դ���ui�⣬�����õ�)
-  ��һЩ����Ҫ���ļ�(icon��test�ļ���)�����������һ�㣬�ڴ��ʱ���԰ѿ������е�ǰ����pythonû�õ��Ŀ�ȫ��ɾ����
+## 依赖
+* [pybind11](https://github.com/pybind/pybind11)， 通过 ```vcpkg install pybind11``` 下载
+* python3.8， 3.8 是最后一个支持 Win7 的版本。这里内置了python38的windows64位版本，并删除了一些不必要的库(比如```tcl, tk```等, 这是自带的ui库，很少用到)
+  和一些不必要的文件(icon、test文件等)。如果更激进一点，在打包时可以把可以运行的前提下python没用到的库全都删除。
 
-## python��Ŀ¼�ṹ
-�ڵ���pythonǰ�����˽�һ��python��Ŀ¼�ṹ���˽�python�Ĳ�ͬģ��ķŵ�ʲôλ�ã��ڰ�װpython���ڸ�Ŀ¼���¿��Կ��������ļ�
-* python38.dll, python�Ķ�̬���ӿ⣬���ж�python�ĵ��ö����ڴˡ�Ϊ�����ƶ���binĿ¼��
-* include�ļ��У�python��capiͷ�ļ�������python��Ҫinclude�����```Python.h```
-* libs�ļ���, �ں�python38.lib, ����python��
-* DLLs�ļ��У���������������Ķ�̬���ӿ��ļ�
-* Lib�ļ��У�python���ڲ�ģ��
-* Lib/site-packages�ļ��У��������⼴pip��װ�����Ŀ¼��
+## python的目录结构
+在调用python前，先了解一下python的目录结构，了解python的不同模块的放到什么位置，在安装python后，在根目录大致可以看到如下文件
+* python38.dll, python的动态链接库，所有对python的调用都基于此。为方便移动至bin目录下
+* include文件夹，python的capi头文件，调用python需要include这里的```Python.h```
+* libs文件夹, 内含python38.lib, 链接python用
+* DLLs文件夹，解释器运行所需的动态链接库文件
+* Lib文件夹，python的内部模块
+* Lib/site-packages文件夹，第三方库即pip安装在这个目录下
 
-## ��дcmake
-* ��������vcpkg�����������vcpkg��װ��python(��װpybind11ʱ��ͬʱ��װpython)��������vcpkgǰ���ҵ�python
+## 编写cmake
+* 由于引入vcpkg后会优先搜索vcpkg安装的python(安装pybind11时会同时安装python)，在引入vcpkg前先找到python
   ```
-  # cmake ����·����������뵱ǰ·��
-  # �������ȫ�ֵ�python��ȷ�����������д��ڼ��ɣ������޸�
+  # cmake 搜索路径，这里加入当前路径
+  # 如果采用全局的python则确保环境变量中存在即可，无需修改
   set(ORIGINAL_CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
   set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/python ${ORIGINAL_CMAKE_PREFIX_PATH})
-  # ֻ����python38�汾
+  # 只搜索python38版本, pybind11需要python Interpreter(对应python.exe) Development(对应python.dll)
   find_package(Python 3.8 EXACT COMPONENTS Interpreter Development REQUIRED)
   ```
-* �� python38.dll��pythonģ�飬python�ű� ���������Ŀ¼
+* 将 python38.dll，python模块，python脚本 拷贝到输出目录
   ```
   add_custom_target(COPY_ASSETS 
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/python/DLLs ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/python/DLLs
@@ -40,33 +40,33 @@
   )
   add_dependencies(${PROJECT_NAME} COPY_ASSETS)
   ```
-* ����target������pybind11��pybind11���Զ�����python
+* 添加target并链接pybind11，pybind11会自动链接python
   ```
   target_link_libraries(callpython PRIVATE pybind11::embed)
   ```
-## ��дC++���ó���
-��```scripts/find_max.py```�б�д�˷ǳ�������dfs��python���������ڳ�����c++�е�����
-* ����python�������ĸ�Ŀ¼
+## 编写C++调用程序
+在```scripts/find_max.py```中编写了非常暴力的dfs的python函数，现在尝试在c++中调用它
+* 设置python解析器的根目录
   ```
   Py_SetPythonHome(L"./python");
   ```
-* ��ʼ��python������ֱ��ʹ��pybind11�ĺ���
+* 初始化python，这里直接使用pybind11的函数
   ```
   py::scoped_interpreter guard{};
   ```
-* ����pythonģ�飬ע�ⲻ��ʹ�����·��
+* 导入python模块，注意不能使用相对路径
   ```
-  // python��module����ʹ�����·������˶��ڽű� ./scripts/find_max.py�� ��Ҫ�Ƚ�·�����ӵ�path��
+  // python的module不能使用相对路径，因此对于脚本 ./scripts/find_max.py， 需要先将路径添加到path中
   py::module::import("sys").attr("path").attr("append")("./scripts");
-  // python��ģ�������ļ���
+  // python的模块名即文件名
   auto find_max = py::module::import("find_max");
   ```
-* ����python������ֱ��ʹ��pybind11�ĺ�������
+* 调用python函数，直接使用pybind11的函数即可
 
-## ���
-�ڲ�ʹ�õ�������������£������������Ŀ¼�Ѿ��߱������л�����������python�������ܴ�С26M��
-�������python�ĵ������⣬���轫��Ӧ�⿽����Lib/site-packages�ļ����¡�
+## 打包
+在不使用第三方库的条件下，编译完后的输出目录已经具备了所有环境，在引入python环境下总大小26M。
+如果引入python的第三方库，则需将对应库拷贝到Lib/site-packages文件夹下。
 
 
-## �ο�
+## 参考
 https://www.zhihu.com/question/48776632/answer/2336654649
