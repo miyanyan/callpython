@@ -7,6 +7,7 @@ find_package(pybind11 REQUIRED)
 
 if(Python_FOUND)
     message(STATUS "Python found: ${Python_EXECUTABLE}")
+    message(STATUS "python include dir: " ${Python_INCLUDE_DIRS})
     message(STATUS "Python version: ${Python_VERSION}")
 else()
     message(FATAL_ERROR "Python not found")
